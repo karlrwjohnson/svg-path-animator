@@ -1,0 +1,16 @@
+{
+  "name": "svg-path-animator",
+  "version": "1.0.0",
+  "description": "Demonstration of what it takes to animate an SVG path",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "eslint main.js lib && webpack"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^3.16.1",
+    "webpack": "^2.2.1"
+  }
+}

@@ -1,0 +1,143 @@
+Bisection of a Cubic Spline
+Karl Johnson, 2017-02-24
+
+-----
+
+Background: In vector-based graphics editors, I can add a control node to the
+middle of a cubic spline by double-clicking it. I wonder how the two sub-
+splines' control nodes are calculated.
+
+-----
+
+Expanded formula for a cubic spline, where A & D are the start & end of the
+segment, and B & C are the two intermediate handles.
+
+Polynomial expansion:
+f(x) = A (1-x)³ + B 3x(1-x)² + C 3x²(1-x) + D x³
+
+Factoring the control points:
+     = A*(1 - 3x + 3x² - x³) + B*(3x - 6x² + 3x³) + C*(3x² - 3x³) + D*(x³)
+
+Factoring the parametric variable:
+     = A + (-3A + 3B)x + (3A - 6B + 3C)x² + (-A + 3B - 3C + D)x³
+
+Matrix form:
+                      ⎡ 1 -3  3 -1 ⎤ ⎡ 1 ⎤
+     = [ A  B  C  D ] ⎢ 0  3 -6  3 ⎥ ⎢ x ⎥
+                      ⎢ 0  0  3 -3 ⎥ ⎢ x²⎥
+                      ⎣ 0  0  0  1 ⎦ ⎣ x³⎦
+
+Derivative:
+
+f'(x) = A*(-3 + 6x - 3x²) + B*(3 - 12x + 9x²) + C*(6x - 9x²) + D*(3x²)
+
+Endpoint characteristics:
+
+f(0) = A    f'(0) = -3A + 3B
+f(1) = D    f'(1) = -3C + 3D
+
+Now, let's create another spline segment which follows f(x), but is scaled such
+that it ends in the middle of the other one.
+
+g(t) = E (1-t)³ + F 3t(1-t)² + G 3t²(1-t) + H t³
+     = E*(1 - 3t + 3t² - t³) + F*(3t - 6t² + 3t³) + G*(3t² - 3t³) + H*(t³)
+     = E + (-3E + 3F)t + (3E - 6F + 3G)t² + (-E + 3F - 3G + H)t³
+g(0) = A
+g(1) = f(T)
+
+Presumably, we're just scaling the parametric variable such that:
+   x = ky
+
+Now, let's solve for {E,F,G,H}
+
+g(t) = f(kt)
+     = A (1-kt)³ + B 3kt(1-kt)² + C 3k²x²(1-kt) + D kt³
+     = A*(1-3kt+3k²t²-k³t³) + B*(3kt-6k²t²+3k³t³) + C*(3k²t²-3k³t³) + D*(k³t³)
+     = A + (-3A + 3B)kt + (3A - 6B + 3C)k²t² + (-A + 3B - 3C + D)k³t³
+
+       E = A   (QED)
+
+       -3E + 3F = (-3A + 3B)k
+        -A +  F =  (-A +  B)k
+        -A +  F =  (-A +  B)k
+        -A +  F = -Ak + Bk
+              F = A(1-k) + Bk
+              F = A - (A - B)k
+
+       3E - 6F + 3G = (3A - 6B + 3C)k²
+        E - 2F +  G = ( A - 2B +  C)k²
+                  G = Ak² -2Bk² + Ck² + 2F - E
+                    = Ak² -2Bk² + Ck² + 2[A - (A - B)k] - A
+                    = Ak² -2Bk² + Ck² + 2A - 2Ak + 2Bk - A
+                    = Ak² -2Bk² + Ck² - 2Ak + 2Bk + A
+                  G = A(k² - 2k + 1) + B(-2k² + 2k) + C(k²)
+                  G = (A - 2B + C)k² - 2(A - B)k + A
+
+       I notice that it's far easier to do these substitutions using the
+       form where we have solved for the parametric variable.
+
+       -E + 3F - 3G + H = (-A + 3B - 3C + D)k³
+       H = (-A + 3B - 3C + D)k³ ⏎
+           + 3[(A - 2B + C)k² - 2(A - B)k + A] ⏎
+           - 3[A - (A - B)k] ⏎
+           + A
+
+         = (-A + 3B - 3C + D)k³ + 3(A - 2B + C)k² - 6(A - B)k + 3A - 3A + 3(A - B)k + A
+
+         = (-A + 3B - 3C + D)k³ + 3(A - 2B + C)k² - 3(A - B)k + A
+         = A*(1 - 3k + 3k² - k³) + B*(3k - 6k² + 3k³) + C*(3k² - 3k³) + D*(k³)
+         = f(k)                                                       (QED)
+
+Notably, each successive point is the parametric expansion of an n-spline.
+I'm sure there's a mathematical proof that would make the reason for this look
+obvious, but I don't know what it is.
+
+    E = A
+    F = A(1-k) + Bk
+    G = A(1-k)² + B(1-k)k + Ck²
+    H = A(1-k)³ + B 3k(1-k)² + C 3k²(1-k) + D k³
+
+Can I put this into matrix form?
+... No. There is nothing linear about the matrix. You can either factor out
+    the powers of the dependent variable or the control points, not both.
+
+⎡ E ⎤   ⎡ A                                                               ⎤
+⎢ F ⎥ = ⎢ A(1-k)               + Bk                                       ⎥
+⎢ G ⎥   ⎢ A(k² - 2k + 1)       + B(-2k² + 2k)      + C(k²)                ⎥
+⎣ H ⎦   ⎣ A(1 - 3k + 3k² - k³) + B(3k - 6k² + 3k³) + C(3k² - 3k³) + D(k³) ⎦
+
+        ⎡ 1                    0                 0            0    ⎤ ⎡ A ⎤
+      = ⎢ (1-k)                (k)               0            0    ⎥ ⎢ B ⎥
+        ⎢ (k² - 2k + 1)        (-2k² + 2k)       (k²)         0    ⎥ ⎢ C ⎥
+        ⎣ (1 - 3k + 3k² - k³)  (3k - 6k² + 3k³)  (3k² - 3k³)  (k³) ⎦ ⎣ D ⎦
+
+        ⎡ 1        0         0        0  ⎤ ⎡ A ⎤
+      = ⎢ (1-k)    k         0        0  ⎥ ⎢ B ⎥
+        ⎢ (1-k)²  2k(1-k)    k²       0  ⎥ ⎢ C ⎥
+        ⎣ (1-k)³  3k(1-k)²  3k²(1-k)  k³ ⎦ ⎣ D ⎦
+
+This is the best I can do:
+
+                ⎡ 1 -3  3 -1 ⎤ ⎡ 1 ⎤
+H = [ A B C D ] ⎢ 0  3 -6  3 ⎥ ⎢ k ⎥
+                ⎢ 0  0  3 -3 ⎥ ⎢ k²⎥
+                ⎣ 0  0  0  1 ⎦ ⎣ k³⎦
+
+                ⎡ 1 -2  1  0 ⎤ ⎡ 1 ⎤
+G = [ A B C D ] ⎢ 0 -2  2  0 ⎥ ⎢ k ⎥
+                ⎢ 0  0  1  0 ⎥ ⎢ k²⎥
+                ⎣ 0  0  0  0 ⎦ ⎣ k³⎦
+
+                ⎡ 1 -1  0  0 ⎤ ⎡ 1 ⎤
+F = [ A B C D ] ⎢ 0  1  0  0 ⎥ ⎢ k ⎥
+                ⎢ 0  0  0  0 ⎥ ⎢ k²⎥
+                ⎣ 0  0  0  0 ⎦ ⎣ k³⎦
+
+                ⎡ 1  0  0  0 ⎤ ⎡ 1 ⎤
+E = [ A B C D ] ⎢ 0  0  0  0 ⎥ ⎢ k ⎥
+                ⎢ 0  0  0  0 ⎥ ⎢ k²⎥
+                ⎣ 0  0  0  0 ⎦ ⎣ k³⎦
+
+Either 1) you have to invent 3D matrices, or 2) you have to make four copies
+of some of the matrices and stitch them together to do it in parallel.
+
